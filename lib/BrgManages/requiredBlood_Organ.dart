@@ -15,8 +15,9 @@ class _RequestScreenState extends State<RequestScreen> {
   bool isOragnRequest = false; // Toggle state
   final _formKey = GlobalKey<FormState>();
   List<Map<String, dynamic>> _searchResults = [];
+  double? _selectedLatitude;
+  double? _selectedLongitude;
   void _showLocationSearch() async {
-    // Show the bottom sheet immediately
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -62,7 +63,7 @@ class _RequestScreenState extends State<RequestScreen> {
                               children: [
                                 CupertinoActivityIndicator(),
                                 SizedBox(width: 8),
-                                Text('Fetching current location...')
+                                Text('Fetching current location...'),
                               ],
                             ),
                           ),
@@ -72,14 +73,33 @@ class _RequestScreenState extends State<RequestScreen> {
                               itemCount: _searchResults.length,
                               itemBuilder: (context, index) {
                                 final location = _searchResults[index];
+                                final locationName =
+                                    location['name'] ?? 'Unknown';
+                                final description =
+                                    location['description'] ?? '';
+                                final latitude = location['latitude'];
+                                final longitude = location['longitude'];
+
                                 return ListTile(
-                                  title: Text(location['name'] ?? 'Unknown'),
-                                  subtitle: Text(location['description'] ?? ''),
+                                  title: Text(locationName),
+                                  subtitle: Text(description),
                                   onTap: () {
+                                    // Save name, latitude, and longitude
                                     setState(() {
-                                      _locationController.text =
-                                          location['name']!;
+                                      _locationController.text = locationName;
+                                      _selectedLatitude =
+                                          double.tryParse(latitude ?? '0.0') ??
+                                              0.0;
+                                      _selectedLongitude =
+                                          double.tryParse(longitude ?? '0.0') ??
+                                              0.0;
                                     });
+
+                                    // Debugging logs
+                                    print('Selected Location: $locationName');
+                                    print(
+                                        'Latitude: $_selectedLatitude, Longitude: $_selectedLongitude');
+
                                     Navigator.pop(context);
                                   },
                                 );
@@ -100,9 +120,14 @@ class _RequestScreenState extends State<RequestScreen> {
                                   currentLocation['locality'] ?? 'Unknown'),
                               subtitle: Text(currentLocation['country'] ?? ''),
                               onTap: () {
+                                // Save current location details
                                 setState(() {
                                   _locationController.text =
-                                      currentLocation['locality']!;
+                                      currentLocation['locality'] ?? 'Unknown';
+                                  _selectedLatitude = double.tryParse(
+                                      currentLocation['latitude'] ?? '0.0');
+                                  _selectedLongitude = double.tryParse(
+                                      currentLocation['longitude'] ?? '0.0');
                                 });
                                 Navigator.pop(context);
                               },
@@ -113,8 +138,14 @@ class _RequestScreenState extends State<RequestScreen> {
                               title: Text(location['name'] ?? 'Unknown'),
                               subtitle: Text(location['description'] ?? ''),
                               onTap: () {
+                                // Save name, latitude, and longitude
                                 setState(() {
-                                  _locationController.text = location['name']!;
+                                  _locationController.text =
+                                      location['name'] ?? 'Unknown';
+                                  _selectedLatitude = double.tryParse(
+                                      location['latitude'] ?? '0.0');
+                                  _selectedLongitude = double.tryParse(
+                                      location['longitude'] ?? '0.0');
                                 });
                                 Navigator.pop(context);
                               },
@@ -139,6 +170,8 @@ class _RequestScreenState extends State<RequestScreen> {
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _contactController = TextEditingController();
   final TextEditingController _urgencyController = TextEditingController();
+  final TextEditingController _genderController = TextEditingController();
+  final TextEditingController _hospitalController = TextEditingController();
 
   // Controllers for blood-specific fields
   final TextEditingController _bloodGroupController = TextEditingController();
@@ -192,6 +225,31 @@ class _RequestScreenState extends State<RequestScreen> {
                     _nameController, 'Name', 'Please enter your name'),
                 buildTextField(_ageController, 'Age', 'Please enter age',
                     inputType: TextInputType.number),
+                DropdownButtonFormField<String>(
+                  value: _genderController.text.isEmpty ? null : _genderController.text,
+                  decoration: InputDecoration(
+                    labelText: 'Gender',
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.3),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  items: ['Male', 'Female', 'Other']
+                      .map((gender) => DropdownMenuItem(
+                    value: gender,
+                    child: Text(gender),
+                  ))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _genderController.text = value ?? '';
+                    });
+                  },
+                  validator: (value) => value == null ? 'Please select a gender' : null,
+                ),
+                const SizedBox(height: 20),
                 TextFormField(
                   controller: _locationController,
                   readOnly: true,
@@ -211,11 +269,9 @@ class _RequestScreenState extends State<RequestScreen> {
                 const SizedBox(
                   height: 20.0,
                 ),
-                buildTextField(_contactController, 'Contact Number',
-                    'Please enter contact number',
-                    inputType: TextInputType.phone),
-                buildTextField(_urgencyController, 'Urgency Level',
-                    'Please specify urgency level'),
+                buildTextField(_contactController, 'Contact Number', 'Please enter contact number', inputType: TextInputType.phone),
+                buildTextField(_hospitalController, 'Hospital Name(Optional)', 'Please enter  hospital name', inputType: TextInputType.phone,required: false),
+                buildTextField(_urgencyController, 'Urgency Level', 'Please specify urgency level'),
 
                 // Blood-specific fields
                 if (!isOragnRequest) ...[
@@ -232,36 +288,79 @@ class _RequestScreenState extends State<RequestScreen> {
                       'Please specify organ type'),
                   buildTextField(_bloodGroupController,
                       'Blood Group (if applicable)', null),
-                  buildTextField(_requiredDateController, 'Required Date',
+                  buildDatePickerTextField(context,_requiredDateController, 'Required Date',
                       'Please enter the required date'),
                 ],
 
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (_formKey.currentState!.validate()) {
-                      if (isOragnRequest) {
-                        // Upload organ details
-                        OrganLS.addOrganDetailsrequired(
-                          donorName: _nameController.text,
-                          organType: _organTypeController.text,
-                          bloodGroup: _bloodGroupController.text,
-                          contactNumber: _contactController.text,
-                          urgency: _urgencyController.text,
-                          location: _locationController.text,
-                          requiredDate: _requiredDateController.text,
+                      // Show loading state
+                      setState(() {
+                        isLoading = true;
+                      });
+
+                      try {
+                        if (isOragnRequest) {
+                          // Upload organ details
+                          await OrganLS.addOrganDetailsrequired(
+                            donorName: _nameController.text,
+                            age: _ageController.text,
+                            organType: _organTypeController.text,
+                            bloodGroup: _bloodGroupController.text,
+                            contactNumber: _contactController.text,
+                            hospitalName: _hospitalController.text,
+                            gender: _genderController.text,
+                            urgency: _urgencyController.text,
+                            location: _locationController.text,
+                            lat: _selectedLatitude,
+                            logg: _selectedLongitude,
+                            requiredDate: _requiredDateController.text,
+                          );
+                        } else {
+                          // Upload blood details
+                          await OrganLS.addBloodDetailsrequired(
+                            donorName: _nameController.text,
+                            age: _ageController.text,
+                            bloodGroup: _bloodGroupController.text,
+                            quantity: _quantityController.text,
+                            hospitalName: _hospitalController.text.isEmpty?"N/A":_hospitalController.text,
+                            gender: _genderController.text,
+                            contactNumber: _contactController.text,
+                            urgency: _urgencyController.text,
+                            location: _locationController.text,
+                            lat: _selectedLatitude,
+                            logg: _selectedLongitude,
+                          );
+                        }
+                        _formKey.currentState!.reset();
+                        _nameController.clear();
+                        _ageController.clear();
+                        _locationController.clear();
+                        _contactController.clear();
+                        _urgencyController.clear();
+                        _genderController.clear();
+                        _hospitalController.clear();
+                        _bloodGroupController.clear();
+                        _quantityController.clear();
+                        _organTypeController.clear();
+                        _requiredDateController.clear();
+
+                        // Show success message
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Request submitted successfully!')),
                         );
-                      } else {
-                        // Upload blood details
-                        OrganLS.addBloodDetailsrequired(
-                          donorName: _nameController.text,
-                          age: _ageController.text,
-                          bloodGroup: _bloodGroupController.text,
-                          quantity: _quantityController.text,
-                          contactNumber: _contactController.text,
-                          urgency: _urgencyController.text,
-                          location: _locationController.text,
+                      } catch (e) {
+                        // Handle any errors during submission
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('An error occurred: $e')),
                         );
+                      } finally {
+                        // Hide loading state
+                        setState(() {
+                          isLoading = false;
+                        });
                       }
                     }
                   },
@@ -272,9 +371,13 @@ class _RequestScreenState extends State<RequestScreen> {
                     ),
                     backgroundColor: Colors.yellow,
                   ),
-                  child: const Center(
+                  child: isLoading
+                      ? const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                  )
+                      : const Center(
                     child: Text(
-                      'Submit Donation',
+                      'Done',
                       style: TextStyle(fontSize: 18, color: Colors.black),
                     ),
                   ),

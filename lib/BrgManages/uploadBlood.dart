@@ -12,13 +12,14 @@ class AddBloodDonationScreen extends StatefulWidget {
 
 class _AddDonationScreenState extends State<AddBloodDonationScreen> {
   List<Map<String, dynamic>> _searchResults = [];
+  double? _selectedLatitude;
+  double? _selectedLongitude;
   void _showLocationSearch() async {
-    // Show the bottom sheet immediately
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) => FractionallySizedBox(
-        heightFactor: 0.6,  // Adjust height to make it non-fullscreen
+        heightFactor: 0.6, // Adjust height to make it non-fullscreen
         child: Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -59,7 +60,7 @@ class _AddDonationScreenState extends State<AddBloodDonationScreen> {
                               children: [
                                 CupertinoActivityIndicator(),
                                 SizedBox(width: 8),
-                                Text('Fetching current location...')
+                                Text('Fetching current location...'),
                               ],
                             ),
                           ),
@@ -69,13 +70,33 @@ class _AddDonationScreenState extends State<AddBloodDonationScreen> {
                               itemCount: _searchResults.length,
                               itemBuilder: (context, index) {
                                 final location = _searchResults[index];
+                                final locationName =
+                                    location['name'] ?? 'Unknown';
+                                final description =
+                                    location['description'] ?? '';
+                                final latitude = location['latitude'];
+                                final longitude = location['longitude'];
+
                                 return ListTile(
-                                  title: Text(location['name'] ?? 'Unknown'),
-                                  subtitle: Text(location['description'] ?? ''),
+                                  title: Text(locationName),
+                                  subtitle: Text(description),
                                   onTap: () {
+                                    // Save name, latitude, and longitude
                                     setState(() {
-                                      _locationController.text = location['name']!;
+                                      _locationController.text = locationName;
+                                      _selectedLatitude =
+                                          double.tryParse(latitude ?? '0.0') ??
+                                              0.0;
+                                      _selectedLongitude =
+                                          double.tryParse(longitude ?? '0.0') ??
+                                              0.0;
                                     });
+
+                                    // Debugging logs
+                                    print('Selected Location: $locationName');
+                                    print(
+                                        'Latitude: $_selectedLatitude, Longitude: $_selectedLongitude');
+
                                     Navigator.pop(context);
                                   },
                                 );
@@ -92,11 +113,18 @@ class _AddDonationScreenState extends State<AddBloodDonationScreen> {
                         itemBuilder: (context, index) {
                           if (index == 0) {
                             return ListTile(
-                              title: Text(currentLocation['locality'] ?? 'Unknown'),
+                              title: Text(
+                                  currentLocation['locality'] ?? 'Unknown'),
                               subtitle: Text(currentLocation['country'] ?? ''),
                               onTap: () {
+                                // Save current location details
                                 setState(() {
-                                  _locationController.text = currentLocation['locality']!;
+                                  _locationController.text =
+                                      currentLocation['locality'] ?? 'Unknown';
+                                  _selectedLatitude = double.tryParse(
+                                      currentLocation['latitude'] ?? '0.0');
+                                  _selectedLongitude = double.tryParse(
+                                      currentLocation['longitude'] ?? '0.0');
                                 });
                                 Navigator.pop(context);
                               },
@@ -107,8 +135,14 @@ class _AddDonationScreenState extends State<AddBloodDonationScreen> {
                               title: Text(location['name'] ?? 'Unknown'),
                               subtitle: Text(location['description'] ?? ''),
                               onTap: () {
+                                // Save name, latitude, and longitude
                                 setState(() {
-                                  _locationController.text = location['name']!;
+                                  _locationController.text =
+                                      location['name'] ?? 'Unknown';
+                                  _selectedLatitude = double.tryParse(
+                                      location['latitude'] ?? '0.0');
+                                  _selectedLongitude = double.tryParse(
+                                      location['longitude'] ?? '0.0');
                                 });
                                 Navigator.pop(context);
                               },
@@ -126,16 +160,21 @@ class _AddDonationScreenState extends State<AddBloodDonationScreen> {
       ),
     );
   }
+
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _donorNameController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _bloodGroupController = TextEditingController();
-  final TextEditingController _contactNumberController = TextEditingController();
-  final TextEditingController _medicalHistoryController = TextEditingController();
+  final TextEditingController _contactNumberController =
+      TextEditingController();
+  final TextEditingController _medicalHistoryController =
+      TextEditingController();
   final TextEditingController _allergiesController = TextEditingController();
-  final TextEditingController _lastDonationDateController = TextEditingController();
-  final TextEditingController _preferredDonationTypeController = TextEditingController();
+  final TextEditingController _lastDonationDateController =
+      TextEditingController();
+  final TextEditingController _preferredDonationTypeController =
+      TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   bool _consentGiven = false;
   bool _isAvailable = true;
@@ -149,10 +188,12 @@ class _AddDonationScreenState extends State<AddBloodDonationScreen> {
       DateTime? lastDonationDate;
       if (_lastDonationDateController.text.isNotEmpty) {
         try {
-          lastDonationDate = DateFormat('dd-MM-yyyy').parse(_lastDonationDateController.text);
+          lastDonationDate =
+              DateFormat('dd-MM-yyyy').parse(_lastDonationDateController.text);
         } catch (e) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid date format. Please use dd-MM-yyyy')),
+            const SnackBar(
+                content: Text('Invalid date format. Please use dd-MM-yyyy')),
           );
           setState(() {
             _isLoading = false;
@@ -171,12 +212,24 @@ class _AddDonationScreenState extends State<AddBloodDonationScreen> {
         lastDonationDate: lastDonationDate,
         preferredDonationType: _preferredDonationTypeController.text,
         location: _locationController.text,
+        lat: _selectedLatitude,
+        logg: _selectedLongitude,
       );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Donation details added successfully!')),
       );
       _formKey.currentState!.reset();
+      _donorNameController.clear();
+      _ageController.clear();
+      _weightController.clear();
+      _bloodGroupController.clear();
+      _contactNumberController.clear();
+      _medicalHistoryController.clear();
+      _allergiesController.clear();
+      _preferredDonationTypeController.clear();
+      _locationController.clear();
       setState(() {
+        lastDonationDate = null;
         _isLoading = false;
       });
     } else if (!_consentGiven) {
@@ -211,9 +264,13 @@ class _AddDonationScreenState extends State<AddBloodDonationScreen> {
               child: Column(
                 children: [
                   // Using _buildTextField for each field
-                  buildTextField(_donorNameController, 'Full Name', 'Please enter your name'),
-                  buildTextField(_ageController, 'Age', 'Please enter your age', inputType: TextInputType.number),
-                  buildTextField(_weightController, 'Weight (kg)', 'Please enter your weight', inputType: TextInputType.number),
+                  buildTextField(_donorNameController, 'Full Name',
+                      'Please enter your name'),
+                  buildTextField(_ageController, 'Age', 'Please enter your age',
+                      inputType: TextInputType.number),
+                  buildTextField(_weightController, 'Weight (kg)',
+                      'Please enter your weight',
+                      inputType: TextInputType.number),
 
                   // Location field with onTap for showing the bottom sheet
                   TextFormField(
@@ -232,17 +289,34 @@ class _AddDonationScreenState extends State<AddBloodDonationScreen> {
                     style: const TextStyle(color: Colors.white),
                     onTap: _showLocationSearch,
                   ),
-                  const SizedBox(height: 20.0,),
-                  buildTextField(_bloodGroupController, 'Blood Group', 'Please enter blood group'),
-                  buildTextField(_contactNumberController, 'Contact Number', 'Please enter contact number', inputType: TextInputType.phone),
-                  buildTextField(_medicalHistoryController, 'Medical History (Optional)', null,required: false),
-                  buildTextField(_allergiesController, 'Allergies (if any)',null, required: false),
-                  buildDatePickerTextField(context,_lastDonationDateController, 'Last Donation Date (Optional)', 'Please enter the last donation date',required: false),
-                  buildTextField(_preferredDonationTypeController, 'Preferred Donation Type (Optional)', null,required: false),
+                  const SizedBox(
+                    height: 20.0,
+                  ),
+                  buildTextField(_bloodGroupController, 'Blood Group',
+                      'Please enter blood group'),
+                  buildTextField(_contactNumberController, 'Contact Number',
+                      'Please enter contact number',
+                      inputType: TextInputType.phone),
+                  buildTextField(_medicalHistoryController,
+                      'Medical History (Optional)', null,
+                      required: false),
+                  buildTextField(
+                      _allergiesController, 'Allergies (if any)', null,
+                      required: false),
+                  buildDatePickerTextField(
+                      context,
+                      _lastDonationDateController,
+                      'Last Donation Date (Optional)',
+                      'Please enter the last donation date',
+                      required: false),
+                  buildTextField(_preferredDonationTypeController,
+                      'Preferred Donation Type (Optional)', null,
+                      required: false),
 
                   const SizedBox(height: 20),
                   CheckboxListTile(
-                    title: const Text('I consent to donate and agree to terms', style: TextStyle(color: Colors.white)),
+                    title: const Text('I consent to donate and agree to terms',
+                        style: TextStyle(color: Colors.white)),
                     value: _consentGiven,
                     onChanged: (bool? value) {
                       setState(() {

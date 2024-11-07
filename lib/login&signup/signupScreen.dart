@@ -2,7 +2,6 @@ import 'package:brg_donation/login&signup/verifyemail.dart';
 import 'package:flutter/material.dart';
 import '../Apis/loginApis.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'loginScreen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -14,17 +13,27 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   bool _isLoading = false; // Loading state
+
+  // Name validation
+  String? _validateName(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your name';
+    }
+    return null;
+  }
 
   // Email validation
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter your email';
     }
-    final emailPattern = r'^[^@]+@[^@]+\.[^@]+$';
+    const emailPattern = r'^[^@]+@[^@]+\.[^@]+$';
     final regExp = RegExp(emailPattern);
 
     if (!regExp.hasMatch(value)) {
@@ -65,17 +74,15 @@ class _SignupScreenState extends State<SignupScreen> {
       try {
         // Sign up with email and password
         OrganLS.signUpWithEmailPassword(
+          name: _nameController.text.trim(),
           email: _emailController.text.trim(),
-          password: _confirmPasswordController.text.trim(),
+          password: _passwordController.text.trim(),
         );
-        // Show success message
-        // ScaffoldMessenger.of(context).showSnackBar(
-        //   const SnackBar(content: Text('Verification email sent. Please check your inbox.')),
-        // );
-        // Redirect to the email verify  screen
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) =>  VerifyEmailScreen(_emailController.text.trim())),
+          MaterialPageRoute(
+              builder: (context) =>
+                  VerifyEmailScreen(_emailController.text.trim())),
         );
       } on FirebaseAuthException catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -119,6 +126,23 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 const SizedBox(height: 40),
                 TextFormField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Name',
+                    labelStyle: const TextStyle(color: Colors.white),
+                    prefixIcon: const Icon(Icons.person, color: Colors.white),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.3),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  style: const TextStyle(color: Colors.white),
+                  validator: _validateName,
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
                   controller: _emailController,
                   decoration: InputDecoration(
                     labelText: 'Email Address',
@@ -159,7 +183,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   decoration: InputDecoration(
                     labelText: 'Confirm Password',
                     labelStyle: const TextStyle(color: Colors.white),
-                    prefixIcon: const Icon(Icons.lock_outline, color: Colors.white),
+                    prefixIcon:
+                        const Icon(Icons.lock_outline, color: Colors.white),
                     filled: true,
                     fillColor: Colors.white.withOpacity(0.3),
                     border: OutlineInputBorder(
@@ -206,7 +231,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const LoginScreen()),
+                          MaterialPageRoute(
+                              builder: (context) => const LoginScreen()),
                         );
                       },
                       child: const Text(
@@ -229,6 +255,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();

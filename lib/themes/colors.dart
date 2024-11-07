@@ -16,4 +16,5 @@ const Color Iconsshado = Color(0xff007AFF);
 const Color Textfieldlight = Color(0xff222224);
 const Color Textfielddark = Color(0xFFF5F5F4);
 const Color Containerdark = Color(0xFF1E1E2A);
+const Color CradDark =  Color(0xff212122);
 

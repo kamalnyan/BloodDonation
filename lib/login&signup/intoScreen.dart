@@ -26,16 +26,16 @@ class IntroScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            'Build Awesome Apps',
+            'Donate Life, Save Lives',
             style: GoogleFonts.poppins(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: Colors.black,
+              color: Colors.redAccent, // Using red for a blood donation theme
             ),
           ),
           const SizedBox(height: 10),
           Text(
-            'Let\'s put your creativity on the development highway.',
+            'Be the hero someone desperately needs. Your donation can bring hope and life.',
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
               fontSize: 16,
@@ -64,7 +64,7 @@ class IntroScreen extends StatelessWidget {
                         foregroundColor: Colors.black,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
-                          side: BorderSide(
+                          side: const BorderSide(
                             color: Colors.black,  // Outline color
                             width: 1,             // Outline width
                           ),

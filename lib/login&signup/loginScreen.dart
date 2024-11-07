@@ -1,8 +1,10 @@
 import 'package:brg_donation/login&signup/signupScreen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../Apis/loginApis.dart';
 import '../Home/home.dart'; // Adjust this import based on your actual file structure
@@ -15,10 +17,13 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isLoadinggoogle = false;
 
   // Function to handle login
   Future<void> _login() async {
@@ -30,7 +35,6 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
-
       setState(() {
         _isLoading = false;
       });
@@ -71,6 +75,56 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoadinggoogle = true; // Show loading indicator
+    });
+
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        // User canceled the sign-in
+        setState(() {
+          _isLoadinggoogle = false; // Hide loading indicator
+        });
+        return;
+      }
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in with Firebase
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      final User? user = userCredential.user;
+
+      setState(() {
+        _isLoadinggoogle = false; // Hide loading indicator
+      });
+
+      if (user != null) {
+        OrganLS.initializeAndAddUserToFirestore(
+            id: user.uid,
+            name: user.displayName??"Unknown",
+            email: user.email??"Unknown",
+            image: user.photoURL??"Unknown",
+            about: 'hey there i am using organ donation'
+        );
+        OrganLS.fetchUserInfo();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen()),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadinggoogle = false; // Hide loading indicator
+      });
+      print("Error during Google sign-in: $e");
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -220,15 +274,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
-                  onPressed: () {
-                    // Add your action here
-                  },
-                  icon: Image.asset(
+                  onPressed: _signInWithGoogle,
+                  icon: _isLoadinggoogle
+                      ? const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  )
+                      : Image.asset(
                     'assets/google-removebg-preview.png',
                     width: 24,
                     height: 24,
                   ),
-                  label: const Text('Sign-In with Google'),
+                  label: _isLoadinggoogle
+                      ? const Text('')
+                      : const Text('Sign-In with Google'),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     backgroundColor: Colors.blue.shade200,

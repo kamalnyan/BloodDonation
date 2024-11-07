@@ -36,13 +36,14 @@ class _AddOrganScreenState extends State<AddOrganScreen> {
   bool _isLoading = false;
   bool _isConsentGiven = false;
   List<Map<String, dynamic>> _searchResults = [];
+  double? _selectedLatitude;
+  double? _selectedLongitude;
   void _showLocationSearch() async {
-    // Show the bottom sheet immediately
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) => FractionallySizedBox(
-        heightFactor: 0.6,  // Adjust height to make it non-fullscreen
+        heightFactor: 0.6, // Adjust height to make it non-fullscreen
         child: Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -83,7 +84,7 @@ class _AddOrganScreenState extends State<AddOrganScreen> {
                               children: [
                                 CupertinoActivityIndicator(),
                                 SizedBox(width: 8),
-                                Text('Fetching current location...')
+                                Text('Fetching current location...'),
                               ],
                             ),
                           ),
@@ -93,13 +94,33 @@ class _AddOrganScreenState extends State<AddOrganScreen> {
                               itemCount: _searchResults.length,
                               itemBuilder: (context, index) {
                                 final location = _searchResults[index];
+                                final locationName =
+                                    location['name'] ?? 'Unknown';
+                                final description =
+                                    location['description'] ?? '';
+                                final latitude = location['latitude'];
+                                final longitude = location['longitude'];
+
                                 return ListTile(
-                                  title: Text(location['name'] ?? 'Unknown'),
-                                  subtitle: Text(location['description'] ?? ''),
+                                  title: Text(locationName),
+                                  subtitle: Text(description),
                                   onTap: () {
+                                    // Save name, latitude, and longitude
                                     setState(() {
-                                      _locationController.text = location['name']!;
+                                      _locationController.text = locationName;
+                                      _selectedLatitude =
+                                          double.tryParse(latitude ?? '0.0') ??
+                                              0.0;
+                                      _selectedLongitude =
+                                          double.tryParse(longitude ?? '0.0') ??
+                                              0.0;
                                     });
+
+                                    // Debugging logs
+                                    print('Selected Location: $locationName');
+                                    print(
+                                        'Latitude: $_selectedLatitude, Longitude: $_selectedLongitude');
+
                                     Navigator.pop(context);
                                   },
                                 );
@@ -116,11 +137,18 @@ class _AddOrganScreenState extends State<AddOrganScreen> {
                         itemBuilder: (context, index) {
                           if (index == 0) {
                             return ListTile(
-                              title: Text(currentLocation['locality'] ?? 'Unknown'),
+                              title: Text(
+                                  currentLocation['locality'] ?? 'Unknown'),
                               subtitle: Text(currentLocation['country'] ?? ''),
                               onTap: () {
+                                // Save current location details
                                 setState(() {
-                                  _locationController.text = currentLocation['locality']!;
+                                  _locationController.text =
+                                      currentLocation['locality'] ?? 'Unknown';
+                                  _selectedLatitude = double.tryParse(
+                                      currentLocation['latitude'] ?? '0.0');
+                                  _selectedLongitude = double.tryParse(
+                                      currentLocation['longitude'] ?? '0.0');
                                 });
                                 Navigator.pop(context);
                               },
@@ -131,8 +159,14 @@ class _AddOrganScreenState extends State<AddOrganScreen> {
                               title: Text(location['name'] ?? 'Unknown'),
                               subtitle: Text(location['description'] ?? ''),
                               onTap: () {
+                                // Save name, latitude, and longitude
                                 setState(() {
-                                  _locationController.text = location['name']!;
+                                  _locationController.text =
+                                      location['name'] ?? 'Unknown';
+                                  _selectedLatitude = double.tryParse(
+                                      location['latitude'] ?? '0.0');
+                                  _selectedLongitude = double.tryParse(
+                                      location['longitude'] ?? '0.0');
                                 });
                                 Navigator.pop(context);
                               },
@@ -161,7 +195,7 @@ class _AddOrganScreenState extends State<AddOrganScreen> {
           lastSurgeryDate = DateFormat('dd-MM-yyyy').parse(_lastSurgeryController.text);
         } catch (e) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Invalid date format. Please use dd-MM-yyyy')),
+            const SnackBar(content: Text('Invalid date format. Please use dd-MM-yyyy')),
           );
           setState(() {
             _isLoading = false;
@@ -170,37 +204,59 @@ class _AddOrganScreenState extends State<AddOrganScreen> {
         }
       }
       await OrganLS.addOrganDetails(
-            donorName:_donorNameController.text,
-        age: _ageController.text,
-        gender: _genderController.text,
-        contactNumber: _contactNumberController.text,
-        email: _emailController.text,
-        id: _idController.text,
-        bloodGroup:_bloodGroupController.text,
-        weight: _weightController.text,
-        height: _heightController.text,
-        medicalHistory: _medicalHistoryController.text,
-        allergies:_allergiesController.text,
-        organName: _organNameController.text,
-        reason: _reasonController.text,
-        hospitalName: _hospitalNameController.text,
+        donorName: _donorNameController.text.isNotEmpty ? _donorNameController.text : 'N/A',
+        age: _ageController.text.isNotEmpty ? _ageController.text : '0',
+        gender: _genderController.text.isNotEmpty ? _genderController.text : 'N/A',
+        contactNumber: _contactNumberController.text.isNotEmpty ? _contactNumberController.text : 'N/A',
+        email: _emailController.text.isNotEmpty ? _emailController.text : 'N/A',
+        id: _idController.text.isNotEmpty ? _idController.text : 'N/A',
+        bloodGroup: _bloodGroupController.text.isNotEmpty ? _bloodGroupController.text : 'N/A',
+        weight: _weightController.text.isNotEmpty ? _weightController.text : '0',
+        height: _heightController.text.isNotEmpty ? _heightController.text : '0',
+        medicalHistory: _medicalHistoryController.text.isNotEmpty ? _medicalHistoryController.text : 'None',
+        allergies: _allergiesController.text.isNotEmpty ? _allergiesController.text : 'None',
+        organName: _organNameController.text.isNotEmpty ? _organNameController.text : 'N/A',
+        reason: _reasonController.text.isNotEmpty ? _reasonController.text : 'N/A',
+        hospitalName: _hospitalNameController.text.isNotEmpty ? _hospitalNameController.text : 'N/A',
         isAvailable: _isAvailable,
-        nextOfKin: _nextOfKinController.text,
+        nextOfKin: _nextOfKinController.text.isNotEmpty ? _nextOfKinController.text : 'N/A',
         lastSurgery: lastSurgeryDate,
-        lifestyleInfo: _lifestyleInfoController.text,
-        specialInstructions: _specialInstructionsController.text,
-        location:  _locationController.text,
+        lifestyleInfo: _lifestyleInfoController.text.isNotEmpty ? _lifestyleInfoController.text : 'N/A',
+        specialInstructions: _specialInstructionsController.text.isNotEmpty ? _specialInstructionsController.text : 'None',
+        location: _locationController.text.isNotEmpty ? _locationController.text : 'N/A',
+        lat: _selectedLatitude,
+        logg: _selectedLongitude,
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Organ details added successfully!')),
+        const SnackBar(content: Text('Organ details added successfully!')),
       );
-
       _formKey.currentState!.reset();
+      _donorNameController.clear();
+      _ageController.clear();
+      _genderController.clear();
+      _contactNumberController.clear();
+      _emailController.clear();
+      _idController.clear();
+      _bloodGroupController.clear();
+      _weightController.clear();
+      _heightController.clear();
+      _medicalHistoryController.clear();
+      _allergiesController.clear();
+      _organNameController.clear();
+      _reasonController.clear();
+      _hospitalNameController.clear();
+      _nextOfKinController.clear();
+      _lastSurgeryController.clear();
+      _lifestyleInfoController.clear();
+      _specialInstructionsController.clear();
+      _locationController.clear();
+
       setState(() {
-        _isLoading = false;
-        _isConsentGiven = false;
+        _isLoading = false; // Reset loading state
+        _isConsentGiven = false; // Reset consent
       });
+
     }
   }
   @override
@@ -230,7 +286,31 @@ class _AddOrganScreenState extends State<AddOrganScreen> {
                 children: [
                   buildTextField(_donorNameController, 'Full Name', 'Please enter donor name',inputType: TextInputType.name),
                   buildTextField(_ageController, 'Age', 'Please enter age',inputType: TextInputType.number),
-                  buildTextField(_genderController, 'Gender', 'Please specify gender'),
+                  DropdownButtonFormField<String>(
+                  value: _genderController.text.isEmpty ? null : _genderController.text,
+                  decoration: InputDecoration(
+                    labelText: 'Gender',
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.3),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  items: ['Male', 'Female', 'Other']
+                      .map((gender) => DropdownMenuItem(
+                    value: gender,
+                    child: Text(gender),
+                  ))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _genderController.text = value ?? '';
+                    });
+                  },
+                  validator: (value) => value == null ? 'Please select a gender' : null,
+                ),
+                  const SizedBox(height: 20),
                   buildTextField(_contactNumberController, 'Contact Number', 'Please enter contact number',inputType: TextInputType.phone),
                   buildTextField(_emailController, 'Email (Optional)', null, required: false,inputType: TextInputType.emailAddress),
 
@@ -255,11 +335,17 @@ class _AddOrganScreenState extends State<AddOrganScreen> {
                       ),
                     ),
                     style: const TextStyle(color: Colors.white),
+                    validator: (value) {
+                      if  (value == null || value.isEmpty){
+                        return "Location is required";
+                      }
+                      return null;
+                    },
                     onTap: _showLocationSearch,
                   ),
                   const SizedBox(height: 20),
-                  buildTextField(_medicalHistoryController, 'Medical History', 'Please enter medical history'),
-                  buildTextField(_allergiesController, 'Allergies', 'Please specify any allergies'),
+                  buildTextField(_medicalHistoryController, 'Medical History (Optional)', 'Please enter medical history',required: false),
+                  buildTextField(_allergiesController, 'Allergies (If Any)', 'Please specify any allergies',required: false),
 
                   // Organ-Specific Details
                   buildTextField(_organNameController, 'Organ to Donate', 'Please specify organ'),
@@ -276,7 +362,7 @@ class _AddOrganScreenState extends State<AddOrganScreen> {
                   buildTextField(_hospitalNameController, 'Hospital Details', 'Please specify hospital'),
                   buildDatePickerTextField(context,_lastSurgeryController, 'Last Donation Date', 'Please enter the last donation date'),
                   // Legal and Consent
-                  buildTextField(_nextOfKinController, 'Next of Kin / Emergency Contact', 'Please specify contact'),
+                  buildTextField(_nextOfKinController, 'Emergency Contact', 'Please specify contact'),
                   CheckboxListTile(
                     title: const Text(
                       'I give my consent to donate my organ(s) as per the details provided.',
@@ -297,8 +383,10 @@ class _AddOrganScreenState extends State<AddOrganScreen> {
                   buildTextField(_lifestyleInfoController, 'Lifestyle Information (Optional)', null, required: false),
                   buildTextField(_specialInstructionsController, 'Any Special Instructions (Optional)', null, required: false),
                   if (_isLoading)
-                    const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow),
+                    const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow),
+                      ),
                     ),
                   if (!_isLoading)
                     ElevatedButton(

@@ -18,6 +18,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_1_8
     }
 
+    dependencies {
+        implementation 'com.google.firebase:firebase-auth:21.1.0'
+        implementation 'com.google.firebase:firebase-firestore:24.1.0'
+        implementation 'com.google.android.gms:play-services-auth:20.6.0'
+        // Add other dependencies as needed
+    }
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_1_8
     }
